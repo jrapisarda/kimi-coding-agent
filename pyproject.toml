@@ -43,6 +43,12 @@ agentic-architect = "agentic_architect.cli:app"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+agentic_architect = [
+    "json_schema/*.json",
+    "examples/*.json",
+]
+
 [tool.black]
 line-length = 100
 target-version = ["py312"]

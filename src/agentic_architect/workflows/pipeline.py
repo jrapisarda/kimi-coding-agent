@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import typer
 
@@ -54,14 +54,14 @@ class AgentOrchestrator:
             VersionControlAgent(self._client, self._session_factory),
         ]
 
-    def run(self, spec: ProjectSpecification) -> Dict[str, Dict[str, str]]:
+    def run(self, spec: ProjectSpecification) -> Dict[str, Dict[str, Any]]:
         context = AgentContext(specification=spec, workspace_root=self.settings.workspace_root)
-        results: Dict[str, Dict[str, str]] = {}
+        results: Dict[str, Dict[str, Any]] = {}
 
         for agent in self._agents:
             self._logger.info("Running agent %s", agent.name)
             result = agent.run(context)
-            results[agent.name] = {k: str(v) for k, v in result.items()}
+            results[agent.name] = dict(result)
 
         return results
 
