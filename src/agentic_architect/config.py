@@ -14,9 +14,9 @@ class OpenAIConfig(BaseModel):
 
     api_key: str = Field(default_factory=lambda: "")
     base_url: Optional[str] = None
-    model: str = "kimi-k2-0905-preview"
+    model: str = "gpt-5"
     temperature: float = 0.2
-    max_output_tokens: int = 4096
+    max_output_tokens: int = 8096
 
 
 class DatabaseConfig(BaseModel):

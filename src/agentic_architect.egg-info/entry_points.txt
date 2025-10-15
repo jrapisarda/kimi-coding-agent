@@ -1,0 +1,2 @@
+[console_scripts]
+agentic-architect = agentic_architect.cli:app
