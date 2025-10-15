@@ -1,0 +1,63 @@
+{
+  "project": {
+    "name": "bioinformatics-etl-cli",
+    "description": "CLI tool for genomic ETL operations",
+    "language": "python",
+    "package_manager": "uv",
+    "license": "MIT",
+    "repository": "https://example.com/genomics"
+  },
+  "architecture": {
+    "pattern": "hexagonal",
+    "components": [
+      {
+        "name": "core",
+        "responsibilities": ["coordinate ETL flow", "manage pipeline state"],
+        "dependencies": ["adapters", "io"]
+      },
+      {
+        "name": "adapters",
+        "responsibilities": ["external API integration", "data source abstraction"],
+        "dependencies": ["io"]
+      },
+      {
+        "name": "io",
+        "responsibilities": ["file storage", "database persistence"],
+        "dependencies": []
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "id": "T-001",
+      "description": "Implement CLI entry point",
+      "deliverables": ["cli module", "arg parser"],
+      "priority": "high"
+    },
+    {
+      "id": "T-002",
+      "description": "Create ETL pipeline",
+      "deliverables": ["pipeline engine", "task runner"],
+      "priority": "high"
+    }
+  ],
+  "testing": {
+    "coverage_threshold": 0.85,
+    "test_types": ["unit", "integration", "e2e"],
+    "integration_requirements": ["mock AWS services", "simulate CLI inputs"]
+  },
+  "documentation": {
+    "audience": "data engineering team",
+    "artifacts": ["README", "API", "Architecture"],
+    "style_guide": "Microsoft" 
+  },
+  "quality": {
+    "formatters": ["black"],
+    "linters": ["ruff"],
+    "type_checking": "mypy"
+  },
+  "deployment": {
+    "targets": ["docker"],
+    "ci_cd": ["github-actions"]
+  }
+}
