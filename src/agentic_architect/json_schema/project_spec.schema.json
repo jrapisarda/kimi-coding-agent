@@ -83,6 +83,19 @@
         "targets": {"type": "array", "items": {"type": "string"}},
         "ci_cd": {"type": "array", "items": {"type": "string"}}
       }
+    },
+    "deliverables": {
+      "type": "object",
+      "properties": {
+        "final_package": {
+          "type": "object",
+          "properties": {
+            "required_files": {"type": "array", "items": {"type": "string"}},
+            "metadata_includes": {"type": "array", "items": {"type": "string"}},
+            "packaging_format": {"type": "string"}
+          }
+        }
+      }
     }
   }
 }

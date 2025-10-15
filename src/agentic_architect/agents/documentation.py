@@ -43,6 +43,18 @@ class DocumentationAgent(BaseAgent):
             sections.extend(f"- {item}\n" for item in assumptions)
         else:
             sections.append("- No additional assumptions\n")
+
+        deliverables = spec.deliverables.final_package
+        if deliverables.required_files or deliverables.metadata_includes:
+            sections.append("\n## Final Package Deliverables\n")
+            if deliverables.required_files:
+                sections.extend(f"- {item}\n" for item in deliverables.required_files)
+            if deliverables.metadata_includes:
+                sections.append("\n### Metadata\n")
+                sections.extend(f"- {item}\n" for item in deliverables.metadata_includes)
+            if deliverables.packaging_format:
+                sections.append(f"\nPreferred packaging: {deliverables.packaging_format}\n")
+
         return "\n".join(sections)
 
     def _generate_api_doc(self, spec) -> str:  # type: ignore[no-untyped-def]

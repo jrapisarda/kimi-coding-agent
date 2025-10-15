@@ -31,7 +31,10 @@ class TestingAgent(BaseAgent):
         pytest_ini.write_text(self._pytest_ini_content(), encoding="utf-8")
 
         test_plan_path = tests_dir / "test_plan.md"
-        test_plan_path.write_text(self._test_plan(spec.testing.test_types), encoding="utf-8")
+        test_plan_path.write_text(
+            self._test_plan(spec.testing.test_types, spec.deliverables.final_package.required_files),
+            encoding="utf-8",
+        )
 
         return {
             "tests_dir": str(tests_dir),
@@ -55,10 +58,13 @@ class TestingAgent(BaseAgent):
             "testpaths = tests\n"
         )
 
-    def _test_plan(self, test_types: List[str]) -> str:
+    def _test_plan(self, test_types: List[str], deliverables: List[str]) -> str:
         sections = ["# Test Plan"]
         for test_type in test_types:
             sections.append(f"## {test_type.title()} Tests\n- Pending implementation")
+        if deliverables:
+            sections.append("## Deliverables Verification")
+            sections.extend(f"- Confirm {item} is produced" for item in deliverables)
         return "\n\n".join(sections)
 
 

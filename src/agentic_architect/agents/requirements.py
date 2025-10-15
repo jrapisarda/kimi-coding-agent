@@ -43,6 +43,11 @@ class RequirementsAnalysisAgent(BaseAgent):
                     "Deployment targets not specified; recommended options researched and documented."
                 )
 
+        if spec.deliverables.final_package.required_files:
+            assumptions.append(
+                "Deliverables checklist seeded to track required final package assets."
+            )
+
         cached_pattern = self._pattern_cache.get(spec.architecture.pattern)
         if cached_pattern:
             assumptions.append("Architecture pattern found in cache; reusing established template.")
