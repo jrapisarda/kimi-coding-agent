@@ -7,6 +7,10 @@ from typing import Any, Dict
 
 from ..models import AgentContext
 from ..services.pattern_cache import PatternCacheService
+from ..services.project_templates import (
+    materialise_template,
+    select_template,
+)
 from .base import BaseAgent
 
 try:  # Optional import for bundled example assets
@@ -31,8 +35,15 @@ class CodeGenerationAgent(BaseAgent):
         context.generated_paths.append(project_root)
 
         pattern_key = spec.architecture.pattern
+        template = select_template(spec)
+
         if spec.project.name == "bioinformatics-etl-cli" and BIOINFORMATICS_ETL_FILES:
             self._generate_bioinformatics_project(project_root)
+        elif template:
+            plan = template.render_plan(spec)
+            self._write_plan(project_root, plan)
+            materialise_template(project_root, spec, template)
+            self._pattern_cache.set(pattern_key, plan, metadata={"template": template.key})
         else:
             cached_template = self._pattern_cache.get(pattern_key)
             if cached_template:
@@ -42,6 +53,8 @@ class CodeGenerationAgent(BaseAgent):
                 response = self.create_llm_response(prompt)
                 self._write_plan(project_root, response)
                 self._pattern_cache.set(pattern_key, response)
+
+        self._materialise_deliverables(project_root, context)
 
         return {"project_root": str(project_root)}
 
@@ -70,6 +83,57 @@ class CodeGenerationAgent(BaseAgent):
                 target.write_text(content, encoding="utf-8")
             else:
                 target.touch()
+
+    def _materialise_deliverables(self, project_root: Path, context: AgentContext) -> None:
+        """Ensure deliverable placeholders exist and create a checklist."""
+
+        final_package = context.specification.deliverables.final_package
+        required_files = final_package.required_files
+        metadata = final_package.metadata_includes
+
+        if not required_files and not metadata and not final_package.packaging_format:
+            return
+
+        created_paths = []
+        for entry in required_files:
+            clean_entry = entry.split(" (")[0].strip()
+            if not clean_entry:
+                continue
+            is_directory = entry.strip().endswith("/") or (
+                Path(clean_entry).suffix == "" and not clean_entry.lower().endswith("dockerfile")
+            )
+            target = project_root / clean_entry
+            if is_directory:
+                target.mkdir(parents=True, exist_ok=True)
+            else:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if not target.exists():
+                    target.touch()
+            created_paths.append(target)
+
+        checklist_path = project_root / "DeliverablesChecklist.md"
+        lines = ["# Deliverables Checklist", ""]
+        if required_files:
+            lines.append("## Required Files")
+            lines.extend(f"- [ ] {item}" for item in required_files)
+            lines.append("")
+        if metadata:
+            lines.append("## Metadata to Capture")
+            lines.extend(f"- {item}" for item in metadata)
+            lines.append("")
+        if final_package.packaging_format:
+            lines.append("## Packaging")
+            lines.append(f"- Preferred format: {final_package.packaging_format}")
+            lines.append("")
+        checklist_path.write_text("\n".join(lines).strip() + "\n", encoding="utf-8")
+
+        context.generated_paths.extend(created_paths + [checklist_path])
+        context.metadata.setdefault("deliverables_required", [])
+        context.metadata["deliverables_required"] = required_files
+        if metadata:
+            context.metadata["deliverables_metadata"] = metadata
+        if final_package.packaging_format:
+            context.metadata["deliverables_packaging"] = final_package.packaging_format
 
 
 __all__ = ["CodeGenerationAgent"]

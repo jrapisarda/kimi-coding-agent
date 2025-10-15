@@ -209,6 +209,41 @@ def _normalize_deployment(deployment: Optional[Dict[str, Any]], specifications: 
     }
 
 
+def _normalize_deliverables(
+    deliverables: Optional[Dict[str, Any]],
+    raw_spec: Dict[str, Any],
+) -> Dict[str, Any]:
+    final_package = (deliverables or {}).get("final_package", {})
+
+    required_files = _ensure_list(final_package.get("required_files"))
+    metadata = _ensure_list(final_package.get("metadata_includes"))
+    packaging_format = final_package.get("packaging_format")
+
+    if not required_files:
+        file_structure = raw_spec.get("file_structure", {})
+        directories = _ensure_list(file_structure.get("directories"))
+        files_map = file_structure.get("files", {}) if isinstance(file_structure.get("files"), dict) else {}
+
+        inferred_files: List[str] = []
+        for directory in directories:
+            inferred_files.append(f"{directory}".rstrip("/"))
+        for directory, files in files_map.items():
+            if isinstance(files, list):
+                for file_name in files:
+                    inferred_files.append(str(Path(directory) / file_name).strip())
+        required_files = [item for item in inferred_files if item]
+
+    return {
+        "final_package": _drop_none(
+            {
+                "required_files": required_files,
+                "metadata_includes": metadata,
+                "packaging_format": packaging_format,
+            }
+        )
+    }
+
+
 def normalize_specification_data(data: Dict[str, Any]) -> Dict[str, Any]:
     """Transform flexible requirement formats into the canonical schema."""
 
@@ -245,6 +280,7 @@ def normalize_specification_data(data: Dict[str, Any]) -> Dict[str, Any]:
         "documentation": _normalize_documentation(data.get("documentation"), specifications, project),
         "quality": _normalize_quality(data.get("quality"), quality_assurance),
         "deployment": _normalize_deployment(data.get("deployment"), specifications),
+        "deliverables": _normalize_deliverables(data.get("deliverables"), data),
     }
 
 
@@ -301,6 +337,16 @@ class DeploymentSpec(BaseModel):
     ci_cd: List[str] = Field(default_factory=list)
 
 
+class FinalPackageSpec(BaseModel):
+    required_files: List[str] = Field(default_factory=list)
+    metadata_includes: List[str] = Field(default_factory=list)
+    packaging_format: Optional[str] = None
+
+
+class DeliverablesSpec(BaseModel):
+    final_package: FinalPackageSpec = Field(default_factory=FinalPackageSpec)
+
+
 class ProjectSpecification(BaseModel):
     project: ProjectInfo
     architecture: ArchitectureSpec
@@ -309,6 +355,7 @@ class ProjectSpecification(BaseModel):
     documentation: DocumentationSpec
     quality: QualitySpec = Field(default_factory=QualitySpec)
     deployment: DeploymentSpec = Field(default_factory=DeploymentSpec)
+    deliverables: DeliverablesSpec = Field(default_factory=DeliverablesSpec)
 
     @classmethod
     def from_json(cls, data: Dict) -> "ProjectSpecification":
@@ -327,7 +374,7 @@ class AgentContext(BaseModel):
     workspace_root: Path
     assumptions: List[str] = Field(default_factory=list)
     generated_paths: List[Path] = Field(default_factory=list)
-    metadata: Dict[str, str] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 __all__ = ["ProjectSpecification", "AgentContext"]
