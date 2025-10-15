@@ -14,7 +14,7 @@ class OpenAIConfig(BaseModel):
 
     api_key: str = Field(default_factory=lambda: "")
     base_url: Optional[str] = None
-    model: str = "gpt-5"
+    model: str = "gpt-4o"
     temperature: float = 0.2
     max_output_tokens: int = 8096
 
