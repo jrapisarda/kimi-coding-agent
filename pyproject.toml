@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentic-architect"
+version = "0.1.0"
+description = "Multi-agent JSON-to-Code generation system using OpenAI agentic SDK"
+readme = "README.md"
+authors = [{name = "Kimi Agent"}]
+license = {file = "LICENSE"}
+requires-python = ">=3.12"
+dependencies = [
+    "openai>=2.3.0",
+    "pydantic>=2.12",
+    "pydantic-settings>=2.5",
+    "sqlalchemy>=2.0",
+    "duckduckgo-search>=6.2.6",
+    "jsonschema>=4.23",
+    "typer>=0.15.1",
+    "rich>=13.9",
+    "tenacity>=9.0",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "coverage>=7.6",
+    "black>=24.10",
+    "ruff>=0.7.4",
+    "mypy>=1.13",
+    "pre-commit>=4.0",
+    "bandit>=1.7",
+    "safety>=3.2",
+]
+
+[project.scripts]
+agentic-architect = "agentic_architect.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "N", "B", "UP", "S"]
+ignore = ["E203", "E501", "B008", "S101"]
+
+[tool.ruff.isort]
+combine-as-imports = true
+known-first-party = ["agentic_architect"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+exclude = ["tests/"]
+plugins = []
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --maxfail=1 --strict-markers --cov=agentic_architect --cov-report=term-missing"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["agentic_architect"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+precision = 2
+
+[tool.bandit]
+targets = ["src/agentic_architect"]
+skip = ["B101"]
+
+[tool.safety]
+ignore = []
