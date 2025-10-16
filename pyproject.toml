@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kimi-coding-agent"
+version = "0.1.0"
+description = "Local-first multi-agent coding orchestrator built on OpenAI Agents SDK"
+readme = "README.md"
+authors = [
+  { name = "OpenAI Kimi Agent" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+  "openai>=1.58.0",
+  "pydantic>=2.7",
+  "typer>=0.12",
+  "rich>=13.7"
+]
+
+[project.scripts]
+kimi-agent = "kimi_agent.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.kimi_agent]
+default_model = "gpt-5.0"
