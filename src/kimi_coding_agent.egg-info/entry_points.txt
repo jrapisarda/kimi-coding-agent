@@ -1,2 +1,0 @@
-[console_scripts]
-agent = kimi_coding_agent.cli.main:app
