@@ -1,0 +1,23 @@
+Metadata-Version: 2.4
+Name: kimi-coding-agent
+Version: 0.1.0
+Summary: Local-first multi-agent coding orchestrator
+Author: Kimi Coding Team
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click==8.1.7
+Requires-Dist: pydantic==2.12.2
+Requires-Dist: sqlalchemy==2.0.44
+Requires-Dist: openai==2.4.0
+Requires-Dist: rich==14.2.0
+Provides-Extra: dev
+Requires-Dist: pytest==8.4.2; extra == "dev"
+Requires-Dist: pytest-cov==5.0.0; extra == "dev"
+Requires-Dist: black==24.10.0; extra == "dev"
+Requires-Dist: ruff==0.7.3; extra == "dev"
+Dynamic: license-file
+
+# Kimi Coding Agent
+
+Local-first multi-agent orchestration system scaffold following the implementation plan in `docs/`.
