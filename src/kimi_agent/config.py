@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 
-DEFAULT_MODEL = "gpt-5.0"
+DEFAULT_MODEL = "gpt-5"
 
 
 @dataclass
