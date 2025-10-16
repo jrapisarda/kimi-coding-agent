@@ -8,7 +8,8 @@ A local-first, multi-agent coding orchestrator built on the latest OpenAI Agents
 - **OpenAI Agents SDK**: Uses the `OpenAI` Python SDK with the Responses API and GPT-5 (`gpt-5.0` by default). Tooling integrates Code Interpreter, optional Web Search, and File Search.
 - **Document ingestion**: Reads Markdown (`.md`, `.markdown`) and JSON files, normalizes them, and feeds them into the Requirements agent.
 - **Local-first execution**: Takes a filesystem snapshot before modifications and automatically rolls back on failure.
-- **Persistence**: Saves run metadata, structured outputs, and artifacts to a local SQLite database (`~/.kimi_agent/runs.db`).
+- **Persistence**: Saves run metadata, structured outputs, handoff inputs, and artifacts to a local SQLite database (`~/.kimi_agent/runs.db`).
+- **Step deliverables**: Writes per-agent inputs/outputs plus generated code objects, requirements JSON, helper manifests, and README drafts to `.kimi_agent/runs/<run_id>/` in the target workspace.
 - **Packaging hooks**: Provides structured outputs that can be zipped into `dist/<run_id>.zip` as a follow-up.
 
 ## Installation

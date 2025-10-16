@@ -22,6 +22,16 @@ class RunRecord:
     metadata: Dict[str, Any]
 
 
+@dataclass
+class StepRecord:
+    run_id: str
+    step: str
+    sequence: int
+    input_payload: Dict[str, Any]
+    output_payload: Dict[str, Any]
+    created_at: datetime
+
+
 class RunStore:
     """Simple SQLite wrapper for persisting run information."""
 
@@ -52,6 +62,20 @@ class RunStore:
                     kind TEXT NOT NULL,
                     label TEXT,
                     body_json TEXT NOT NULL,
+                    FOREIGN KEY(run_id) REFERENCES runs(run_id)
+                )
+                """
+            )
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS step_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id TEXT NOT NULL,
+                    step TEXT NOT NULL,
+                    sequence INTEGER NOT NULL,
+                    handoff_json TEXT,
+                    output_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(run_id) REFERENCES runs(run_id)
                 )
                 """
@@ -94,3 +118,47 @@ class RunStore:
             )
             for kind, label, body_json in cursor.fetchall():
                 yield {"kind": kind, "label": label, "body": json.loads(body_json)}
+
+    def add_step(
+        self,
+        run_id: str,
+        step: str,
+        sequence: int,
+        handoff: Optional[Dict[str, Any]],
+        output: Dict[str, Any],
+    ) -> None:
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO step_logs (run_id, step, sequence, handoff_json, output_json)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    step,
+                    sequence,
+                    json.dumps(handoff) if handoff is not None else None,
+                    json.dumps(output),
+                ),
+            )
+
+    def list_steps(self, run_id: str) -> Iterable[StepRecord]:
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute(
+                """
+                SELECT step, sequence, handoff_json, output_json, created_at
+                FROM step_logs
+                WHERE run_id = ?
+                ORDER BY sequence
+                """,
+                (run_id,),
+            )
+            for step, sequence, handoff_json, output_json, created_at in cursor.fetchall():
+                yield StepRecord(
+                    run_id=run_id,
+                    step=step,
+                    sequence=sequence,
+                    input_payload=json.loads(handoff_json) if handoff_json else {},
+                    output_payload=json.loads(output_json),
+                    created_at=datetime.fromisoformat(created_at),
+                )
