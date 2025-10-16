@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 from openai import OpenAI
 from pydantic import BaseModel
@@ -22,12 +22,16 @@ class BasePersonaAgent(ABC):
     def __init__(
         self,
         client: OpenAI,
-        agent_id: str,
+        agent_id: Optional[str],
+        model: str,
+        instructions: Optional[str],
         output_model: Type[AgentOutput],
         name: str,
     ) -> None:
         self.client = client
         self.agent_id = agent_id
+        self.model = model
+        self.instructions = instructions
         self.output_model = output_model
         self.name = name
 
@@ -39,21 +43,38 @@ class BasePersonaAgent(ABC):
         """Invoke the agent and parse the structured response."""
 
         input_payload = self.build_input(context)
-        response = self.client.responses.parse(
-            agent_id=self.agent_id,
-            input=[
+        messages = []
+        if self.agent_id is None and self.instructions:
+            messages.append(
                 {
-                    "role": "user",
+                    "role": "system",
                     "content": [
                         {
                             "type": "input_text",
-                            "text": input_payload,
+                            "text": self.instructions,
                         }
                     ],
                 }
-            ],
-            response_format=self.output_model,
+            )
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": input_payload,
+                    }
+                ],
+            }
         )
+
+        kwargs: Dict[str, Any] = {"input": messages, "response_format": self.output_model}
+        if self.agent_id is not None:
+            kwargs["agent_id"] = self.agent_id
+        else:
+            kwargs["model"] = self.model
+
+        response = self.client.responses.parse(**kwargs)
         if hasattr(response, "output"):
             return response.output[0]
         if isinstance(response, self.output_model):

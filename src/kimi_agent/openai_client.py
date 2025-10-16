@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Iterable, Optional
 
@@ -36,7 +37,16 @@ def prepare_tools(enable_code_interpreter: bool, enable_web_search: bool, enable
     return tools
 
 
-def _agents_resource(client: OpenAI) -> Any:
+@dataclass(frozen=True)
+class AgentHandle:
+    """Represents how downstream code should address the model/agent."""
+
+    model: str
+    agent_id: Optional[str]
+    instructions: Optional[str]
+
+
+def _agents_resource(client: OpenAI) -> Optional[Any]:
     """Return the Agents API resource from the OpenAI client.
 
     The SDK transitioned from ``client.beta.agents`` to ``client.agents``. Users
@@ -53,22 +63,30 @@ def _agents_resource(client: OpenAI) -> Any:
     if beta is not None and hasattr(beta, "agents"):
         return beta.agents
 
-    raise RuntimeError(
-        "The configured OpenAI client does not expose the Agents API. Upgrade the"
-        " `openai` package to >=1.51.0 or provide a compatible client via"
-        " `KIMI_AGENT_OPENAI_CLIENT_FACTORY`."
-    )
+    return None
 
 
-def create_agent_if_needed(client: OpenAI, name: str, instructions: str, tools: Iterable[dict], model: Optional[str] = None) -> str:
+def create_agent_if_needed(
+    client: OpenAI,
+    name: str,
+    instructions: str,
+    tools: Iterable[dict],
+    model: Optional[str] = None,
+) -> AgentHandle:
     """Create an ephemeral agent for the run if one is not already provided."""
 
-    model = model or _selected_model()
+    selected_model = model or _selected_model()
     agents = _agents_resource(client)
+    if agents is None:
+        # Older SDK versions do not expose the Agents API. Fall back to direct
+        # ``responses`` usage by returning a handle with a missing agent_id so
+        # downstream code can send the instructions as a system message.
+        return AgentHandle(model=selected_model, agent_id=None, instructions=instructions)
+
     response = agents.create(
         name=name,
-        model=model,
+        model=selected_model,
         instructions=instructions,
         tools=list(tools),
     )
-    return response.id
+    return AgentHandle(model=selected_model, agent_id=response.id, instructions=None)

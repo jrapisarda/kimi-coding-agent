@@ -142,14 +142,21 @@ class AgentOrchestrator:
             self.run_config.enable_web_search,
             self.run_config.enable_file_search,
         )
-        agent_id = create_agent_if_needed(
+        agent_handle = create_agent_if_needed(
             self.client,
             name=config.name,
             instructions=instructions,
             tools=tools,
             model=config.model,
         )
-        return cls(self.client, agent_id, output_model, config.name)
+        return cls(
+            self.client,
+            agent_handle.agent_id,
+            agent_handle.model,
+            agent_handle.instructions,
+            output_model,
+            config.name,
+        )
 
     def _summarize(
         self,
