@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+  api-gateway:
+    build: ./services/api_gateway
+    command: uvicorn codex_chopan_app.services.api_gateway.main:app --host 0.0.0.0 --port 8000
+    environment:
+      - CHOPAN_API_KEY=test-key
+    ports:
+      - '8000:8000'
+    depends_on:
+      - redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
