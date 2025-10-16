@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Type
 
 from openai import OpenAI
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 class AgentOutput(BaseModel):
@@ -99,7 +99,12 @@ class BasePersonaAgent(ABC):
             raw = response.output_text
         else:
             raw = str(response)
-        return self.output_model.model_validate_json(raw)
+        try:
+            return self.parse_fallback(raw, context)
+        except ValidationError as exc:
+            raise ValueError(
+                f"Failed to parse structured output from {self.name}: {exc}"
+            ) from exc
 
     def _coerce_output(self, response: Any) -> Optional[AgentOutput]:
         """Attempt to coerce SDK responses into the desired Pydantic model."""
@@ -119,3 +124,13 @@ class BasePersonaAgent(ABC):
                 return self.output_model.model_validate_json(content.text)
 
         return None
+
+    def parse_fallback(self, raw: str, context: Dict[str, Any]) -> AgentOutput:
+        """Parse raw text into the desired Pydantic model.
+
+        Subclasses may override to provide richer parsing when the SDK returns
+        plain text instead of structured JSON. The default implementation
+        attempts to interpret the text as JSON.
+        """
+
+        return self.output_model.model_validate_json(raw)
