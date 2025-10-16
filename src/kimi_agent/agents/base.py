@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Type
 
@@ -68,24 +67,55 @@ class BasePersonaAgent(ABC):
             }
         )
 
-        kwargs: Dict[str, Any] = {"input": messages, "response_format": self.output_model}
+        kwargs: Dict[str, Any] = {"input": messages}
         if self.agent_id is not None:
             kwargs["agent_id"] = self.agent_id
         else:
             kwargs["model"] = self.model
 
-        response = self.client.responses.parse(**kwargs)
-        if hasattr(response, "output"):
-            return response.output[0]
-        if isinstance(response, self.output_model):
-            return response
-        # Fallback: parse raw JSON string
-        if hasattr(response, "output") and response.output:
-            content = response.output[0]
-            if hasattr(content, "content"):
-                raw = content.content[0].text
+        responses = self.client.responses
+        parse_fn = getattr(responses, "parse", None)
+
+        if callable(parse_fn):
+            try:
+                response = parse_fn(response_format=self.output_model, **kwargs)
+            except TypeError as exc:  # pragma: no cover - dependent on SDK version
+                if "response_format" not in str(exc):
+                    raise
+                response = responses.create(**kwargs)
             else:
-                raw = json.dumps(response.output)
+                parsed = self._coerce_output(response)
+                if parsed is not None:
+                    return parsed
+                response = response  # fall through to generic parsing
+        else:
+            response = responses.create(**kwargs)
+
+        fallback = self._coerce_output(response)
+        if fallback is not None:
+            return fallback
+
+        if hasattr(response, "output_text") and response.output_text:
+            raw = response.output_text
         else:
             raw = str(response)
         return self.output_model.model_validate_json(raw)
+
+    def _coerce_output(self, response: Any) -> Optional[AgentOutput]:
+        """Attempt to coerce SDK responses into the desired Pydantic model."""
+
+        if isinstance(response, self.output_model):
+            return response
+
+        if hasattr(response, "output") and response.output:
+            content = response.output[0]
+            if hasattr(content, "content") and content.content:
+                first_segment = content.content[0]
+                if hasattr(first_segment, "text") and first_segment.text:
+                    return self.output_model.model_validate_json(first_segment.text)
+                if isinstance(first_segment, dict) and first_segment.get("text"):
+                    return self.output_model.model_validate_json(first_segment["text"])
+            if hasattr(content, "text") and content.text:
+                return self.output_model.model_validate_json(content.text)
+
+        return None
