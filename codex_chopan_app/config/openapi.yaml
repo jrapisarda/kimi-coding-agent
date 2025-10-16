@@ -1,0 +1,17 @@
+openapi: 3.0.3
+info:
+  title: Chopan Outreach Gateway
+  version: '1.0.0'
+paths:
+  /api/content/draft:
+    post:
+      summary: Create a content draft
+      responses:
+        '200':
+          description: Draft created
+  /api/prospect/discover:
+    post:
+      summary: Discover new prospects
+      responses:
+        '200':
+          description: Discovery result
