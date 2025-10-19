@@ -51,6 +51,14 @@ def scaffold_project(project_type: str, target_path: Path) -> ScaffoldResult:
             "pandas": "2.2.2",
         }
         notes = "Generated sklearn training scaffold with sample dataset."
+    elif project_type == "multi-agent-coding-system":
+        files.extend(_write_multi_agent_system(target_path))
+        dependencies["pip"] = {
+            "click": "8.1.7",
+            "openai": "1.52.0",
+            "pydantic": "2.7.0",
+        }
+        notes = "Generated multi-agent coding system scaffold aligned with spec_2."
     else:
         files.extend(_write_generic(target_path))
         notes = "Generated generic project scaffold."
@@ -279,6 +287,311 @@ def test_train_model():
         "scikit-learn==1.5.0\npandas==2.2.2\n",
     )
     files.append("requirements.txt")
+    return files
+
+
+def _write_multi_agent_system(root: Path) -> List[str]:
+    files: List[str] = []
+    _write_file(
+        root / "README.md",
+        """# Multi-Agent Coding System\n\n"
+        "This scaffold implements a CLI-driven multi-agent pipeline following spec_2. "
+        "It wires together requirements, coding, testing, and documentation agents with "
+        "a SQLite-backed run store and OpenAI client stub."
+        """,
+    )
+    files.append("README.md")
+    _write_file(
+        root / "pyproject.toml",
+        """[build-system]\n"
+        "requires = [\"setuptools\", \"wheel\"]\n"
+        "build-backend = \"setuptools.build_meta\"\n\n"
+        "[project]\n"
+        "name = \"agent-system\"\n"
+        "version = \"0.1.0\"\n"
+        "description = \"CLI pipeline orchestrating multi-agent code generation\"\n"
+        "readme = \"README.md\"\n"
+        "requires-python = \">=3.10\"\n"
+        "dependencies = [\n"
+        "    \"click>=8.1\",\n"
+        "    \"openai>=1.0\",\n"
+        "    \"pydantic>=2.7\",\n"
+        "]\n\n"
+        "[project.scripts]\n"
+        "agent-system = \"agent_system.cli:main\"\n"
+        """,
+    )
+    files.append("pyproject.toml")
+    _write_file(
+        root / "requirements.txt",
+        "click==8.1.7\nopenai==1.52.0\npydantic==2.7.0\n",
+    )
+    files.append("requirements.txt")
+
+    package_root = root / "src" / "agent_system"
+    _write_file(package_root / "__init__.py", '"""Multi-agent coding system package."""\n')
+    files.append("src/agent_system/__init__.py")
+
+    _write_file(
+        package_root / "config.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from pathlib import Path\n\n"
+        "@dataclass(slots=True)\n"
+        "class AppConfig:\n"
+        "    \"\"\"Runtime configuration for the orchestrator.\"\"\"\n"
+        "    data_dir: Path\n"
+        "    api_key: str | None = None\n"
+        "    model: str = \"gpt-5-mini\"\n\n"
+        "    @classmethod\n"
+        "    def load(cls, *, data_dir: Path | None = None) -> \"AppConfig\":\n"
+        "        data_dir = data_dir or Path(\"var\") / \"runs\"\n"
+        "        data_dir.mkdir(parents=True, exist_ok=True)\n"
+        "        return cls(data_dir=data_dir, api_key=None)\n"
+        """,
+    )
+    files.append("src/agent_system/config.py")
+
+    agents_root = package_root / "agents"
+    _write_file(agents_root / "__init__.py", "from .requirements import RequirementsAgent\nfrom .coding import CodingAgent\nfrom .testing import TestingAgent\nfrom .documentation import DocumentationAgent\nfrom .base import Agent, AgentResult\n\n\n__all__ = ['RequirementsAgent', 'CodingAgent', 'TestingAgent', 'DocumentationAgent', 'Agent', 'AgentResult']\n")
+    files.append("src/agent_system/agents/__init__.py")
+
+    _write_file(
+        agents_root / "base.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from typing import Protocol\n\n"
+        "@dataclass(slots=True)\n"
+        "class AgentResult:\n"
+        "    name: str\n"
+        "    status: str\n"
+        "    summary: str\n"
+        "    details: dict[str, object]\n\n"
+        "class Agent(Protocol):\n"
+        "    name: str\n"
+        "    def run(self, context: dict[str, object]) -> AgentResult: ...\n"
+        """,
+    )
+    files.append("src/agent_system/agents/base.py")
+
+    _write_file(
+        agents_root / "requirements.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from .base import Agent, AgentResult\n\n"
+        "@dataclass(slots=True)\n"
+        "class RequirementsAgent:\n"
+        "    name: str = \"requirements\"\n\n"
+        "    def run(self, context: dict[str, object]) -> AgentResult:\n"
+        "        prompt = str(context.get('prompt', ''))\n"
+        "        summary = f"Structured requirements captured for: {prompt or 'unspecified project'}"\n"
+        "        details = {'prompt': prompt, 'acceptance': ['CLI wiring', 'Agent sequencing', 'SQLite persistence']}\n"
+        "        context['requirements'] = details\n"
+        "        return AgentResult(name=self.name, status='succeeded', summary=summary, details=details)\n"
+        """,
+    )
+    files.append("src/agent_system/agents/requirements.py")
+
+    _write_file(
+        agents_root / "coding.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from pathlib import Path\n"
+        "from .base import Agent, AgentResult\n\n"
+        "@dataclass(slots=True)\n"
+        "class CodingAgent:\n"
+        "    name: str = \"coding\"\n\n"
+        "    def run(self, context: dict[str, object]) -> AgentResult:\n"
+        "        target = Path(context['target_path'])\n"
+        "        target.mkdir(parents=True, exist_ok=True)\n"
+        "        (target / 'README.md').write_text('# Generated Project\\n', encoding='utf-8')\n"
+        "        plan = {'tasks': ['Create orchestrator', 'Implement agents', 'Prepare tests'], 'commands': ['pytest -q']}\n"
+        "        context['coding_plan'] = plan\n"
+        "        return AgentResult(name=self.name, status='succeeded', summary='Coding plan prepared.', details=plan)\n"
+        """,
+    )
+    files.append("src/agent_system/agents/coding.py")
+
+    _write_file(
+        agents_root / "testing.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from .base import Agent, AgentResult\n\n"
+        "@dataclass(slots=True)\n"
+        "class TestingAgent:\n"
+        "    name: str = \"testing\"\n\n"
+        "    def run(self, context: dict[str, object]) -> AgentResult:\n"
+        "        return AgentResult(name=self.name, status='succeeded', summary='Testing scaffold created.', details={'tests': ['pytest']})\n"
+        """,
+    )
+    files.append("src/agent_system/agents/testing.py")
+
+    _write_file(
+        agents_root / "documentation.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from .base import Agent, AgentResult\n\n"
+        "@dataclass(slots=True)\n"
+        "class DocumentationAgent:\n"
+        "    name: str = \"documentation\"\n\n"
+        "    def run(self, context: dict[str, object]) -> AgentResult:\n"
+        "        readme = context.get('target_path')\n"
+        "        return AgentResult(name=self.name, status='succeeded', summary='Documentation generated.', details={'readme': readme})\n"
+        """,
+    )
+    files.append("src/agent_system/agents/documentation.py")
+
+    persistence_root = package_root / "persistence"
+    _write_file(persistence_root / "__init__.py", "from .store import RunStore\n\n__all__ = ['RunStore']\n")
+    files.append("src/agent_system/persistence/__init__.py")
+    _write_file(
+        persistence_root / "store.py",
+        """from __future__ import annotations\n\n"
+        "import sqlite3\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "class RunStore:\n"
+        "    \"\"\"Lightweight SQLite persistence for pipeline metadata.\"\"\"\n\n"
+        "    def __init__(self, path: Path) -> None:\n"
+        "        self._path = Path(path)\n"
+        "        self._path.parent.mkdir(parents=True, exist_ok=True)\n"
+        "        self._initialise()\n\n"
+        "    def _initialise(self) -> None:\n"
+        "        with sqlite3.connect(self._path) as conn:\n"
+        "            conn.execute(\n"
+        "                \"CREATE TABLE IF NOT EXISTS runs (id INTEGER PRIMARY KEY AUTOINCREMENT, prompt TEXT, status TEXT)\"\n"
+        "            )\n"
+        "            conn.commit()\n\n"
+        "    def record(self, *, prompt: str, status: str) -> None:\n"
+        "        with sqlite3.connect(self._path) as conn:\n"
+        "            conn.execute(\"INSERT INTO runs(prompt, status) VALUES (?, ?)\", (prompt, status))\n"
+        "            conn.commit()\n\n"
+        "    def fetch_all(self) -> list[dict[str, Any]]:\n"
+        "        with sqlite3.connect(self._path) as conn:\n"
+        "            rows = conn.execute(\"SELECT id, prompt, status FROM runs ORDER BY id DESC\").fetchall()\n"
+        "        return [{"id": row[0], "prompt": row[1], "status": row[2]} for row in rows]\n"
+        """,
+    )
+    files.append("src/agent_system/persistence/store.py")
+
+    sdk_root = package_root / "sdk"
+    _write_file(sdk_root / "__init__.py", "from .openai_client import OpenAIClient\n\n__all__ = ['OpenAIClient']\n")
+    files.append("src/agent_system/sdk/__init__.py")
+    _write_file(
+        sdk_root / "openai_client.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n\n"
+        "@dataclass(slots=True)\n"
+        "class OpenAIClient:\n"
+        "    api_key: str | None = None\n"
+        "    model: str = \"gpt-5-mini\"\n\n"
+        "    def generate(self, prompt: str) -> str:\n"
+        "        \"\"\"Stub generation call for local development.\"\"\"\n"
+        "        return f"model={self.model}: {prompt[:200]}"\n"
+        """,
+    )
+    files.append("src/agent_system/sdk/openai_client.py")
+
+    _write_file(
+        package_root / "orchestrator.py",
+        """from __future__ import annotations\n\n"
+        "from dataclasses import dataclass\n"
+        "from datetime import datetime\n"
+        "from pathlib import Path\n"
+        "from typing import Iterable, List\n\n"
+        "from .agents import Agent, AgentResult\n"
+        "from .config import AppConfig\n"
+        "from .persistence import RunStore\n"
+        "from .sdk import OpenAIClient\n\n"
+        "@dataclass(slots=True)\n"
+        "class PipelineRequest:\n"
+        "    target_path: Path\n"
+        "    prompt: str\n"
+        "    spec_path: Path | None = None\n\n"
+        "@dataclass(slots=True)\n"
+        "class PipelineResult:\n"
+        "    status: str\n"
+        "    started_at: datetime\n"
+        "    completed_at: datetime\n"
+        "    agent_results: List[AgentResult]\n\n"
+        "class Orchestrator:\n"
+        "    def __init__(self, *, config: AppConfig, store: RunStore, agents: Iterable[Agent], client: OpenAIClient) -> None:\n"
+        "        self._config = config\n"
+        "        self._store = store\n"
+        "        self._agents = list(agents)\n"
+        "        self._client = client\n\n"
+        "    def execute(self, request: PipelineRequest) -> PipelineResult:\n"
+        "        context: dict[str, object] = {'prompt': request.prompt, 'target_path': str(request.target_path)}\n"
+        "        started = datetime.utcnow()\n"
+        "        results: List[AgentResult] = []\n"
+        "        status = 'succeeded'\n"
+        "        for agent in self._agents:\n"
+        "            result = agent.run(context)\n"
+        "            results.append(result)\n"
+        "            if result.status != 'succeeded':\n"
+        "                status = 'partial-success'\n"
+        "        self._store.record(prompt=request.prompt, status=status)\n"
+        "        return PipelineResult(status=status, started_at=started, completed_at=datetime.utcnow(), agent_results=results)\n"
+        """,
+    )
+    files.append("src/agent_system/orchestrator.py")
+
+    _write_file(
+        package_root / "cli.py",
+        """from __future__ import annotations\n\n"
+        "import json\n"
+        "from pathlib import Path\n\n"
+        "import click\n\n"
+        "from .agents import CodingAgent, DocumentationAgent, RequirementsAgent, TestingAgent\n"
+        "from .config import AppConfig\n"
+        "from .orchestrator import Orchestrator, PipelineRequest\n"
+        "from .persistence import RunStore\n"
+        "from .sdk import OpenAIClient\n\n"
+        "def _build_agents():\n"
+        "    return [RequirementsAgent(), CodingAgent(), TestingAgent(), DocumentationAgent()]\n\n"
+        "@click.group()\n"
+        "def main() -> None:\n"
+        "    \"\"\"CLI entrypoint for the multi-agent coding system.\"\"\"\n\n"
+        "@main.command()\n"
+        "@click.argument('target_path', type=click.Path(path_type=Path))\n"
+        "@click.option('--prompt', type=str, default='')\n"
+        "@click.option('--spec', type=click.Path(path_type=Path), default=None)\n"
+        "def run(target_path: Path, prompt: str, spec: Path | None) -> None:\n"
+        "    config = AppConfig.load()\n"
+        "    store = RunStore(config.data_dir / 'runs.sqlite')\n"
+        "    client = OpenAIClient(api_key=config.api_key, model=config.model)\n"
+        "    orchestrator = Orchestrator(config=config, store=store, agents=_build_agents(), client=client)\n"
+        "    result = orchestrator.execute(PipelineRequest(target_path=target_path, prompt=prompt, spec_path=spec))\n"
+        "    payload = {\n"
+        "        'status': result.status,\n"
+        "        'agents': [r.summary for r in result.agent_results],\n"
+        "    }\n"
+        "    click.echo(json.dumps(payload, indent=2))\n"
+        """,
+    )
+    files.append("src/agent_system/cli.py")
+
+    tests_root = root / "tests"
+    _write_file(
+        tests_root / "test_pipeline.py",
+        """from pathlib import Path\n\n"
+        "from agent_system.agents import CodingAgent, DocumentationAgent, RequirementsAgent, TestingAgent\n"
+        "from agent_system.config import AppConfig\n"
+        "from agent_system.orchestrator import Orchestrator, PipelineRequest\n"
+        "from agent_system.persistence import RunStore\n"
+        "from agent_system.sdk import OpenAIClient\n\n"
+        "def test_orchestrator_executes(tmp_path: Path):\n"
+        "    config = AppConfig.load(data_dir=tmp_path / 'data')\n"
+        "    store = RunStore(config.data_dir / 'runs.sqlite')\n"
+        "    agents = [RequirementsAgent(), CodingAgent(), TestingAgent(), DocumentationAgent()]\n"
+        "    orchestrator = Orchestrator(config=config, store=store, agents=agents, client=OpenAIClient())\n"
+        "    result = orchestrator.execute(PipelineRequest(target_path=tmp_path / 'project', prompt='spec_2'))\n"
+        "    assert result.status == 'succeeded'\n"
+        "    assert len(result.agent_results) == 4\n"
+        """,
+    )
+    files.append("tests/test_pipeline.py")
+
     return files
 def _write_generic(root: Path) -> List[str]:
     files = []
