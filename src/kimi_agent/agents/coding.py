@@ -33,7 +33,23 @@ class CodingAgent(Agent):
     def execute(self, context: AgentContext) -> AgentResult:
         requirements = context.outputs.get('requirements')
         requirements_summary = requirements.summary if requirements else 'No requirements summary available.'
-        project_type = _classify_project(context.request.prompt, requirements_summary)
+        requirements_details = getattr(requirements, 'details', {}) if requirements else {}
+        doc_excerpt = requirements_details.get('document_excerpt') if isinstance(requirements_details, dict) else None
+        full_doc_text: Optional[str] = None
+        doc_path = context.request.input_docs
+        if doc_path:
+            try:
+                full_doc_text = Path(doc_path).read_text(encoding='utf-8')
+            except FileNotFoundError:
+                full_doc_text = None
+
+        project_type = _classify_project(
+            context.request.prompt,
+            requirements_summary,
+            doc_excerpt=doc_excerpt,
+            full_doc=full_doc_text,
+            doc_path=doc_path,
+        )
 
         plan_prompt = (
             "You are the Coding Agent. Produce a concise implementation plan for the project described.\n"
@@ -155,8 +171,21 @@ class CodingAgent(Agent):
         )
 
 
-def _classify_project(prompt: Optional[str], requirements_summary: str) -> str:
-    text = ' '.join(filter(None, [prompt or '', requirements_summary])).lower()
+def _classify_project(
+    prompt: Optional[str],
+    requirements_summary: str,
+    *,
+    doc_excerpt: Optional[str] = None,
+    full_doc: Optional[str] = None,
+    doc_path: Optional[Path] = None,
+) -> str:
+    segments = [prompt or '', requirements_summary or '', doc_excerpt or '', full_doc or '']
+    if doc_path:
+        segments.append(doc_path.name)
+        segments.append(str(doc_path))
+    text = ' '.join(filter(None, segments)).lower()
+    if '@spec_2.md' in text or 'spec 2' in text or 'multi-agent' in text or 'agents sdk' in text or 'json-to-code' in text:
+        return 'multi-agent-coding-system'
     if any(token in text for token in ('next.js', 'nextjs', 'react dashboard')):
         return 'nextjs-dashboard'
     if 'fastapi' in text or 'crud' in text:
@@ -169,13 +198,41 @@ def _classify_project(prompt: Optional[str], requirements_summary: str) -> str:
 
 
 def _build_plan(project_type: str, target_path: Path, plan_text: str) -> CodingPlan:
-    tasks = [
-        'Initialise repository structure and configuration.',
-        'Generate baseline code scaffolding aligning with requirements.',
-        'Create smoke tests to validate critical paths.',
-    ]
-    commands = ['git init' if project_type != 'generic-software-project' else 'mkdir -p src']
-    files = ['README.md', 'tests/'] if project_type != 'generic-software-project' else ['docs/notes.md']
+    if project_type == 'multi-agent-coding-system':
+        tasks = [
+            'Establish Python package layout for CLI, orchestrator, and agents.',
+            'Implement SQLite-backed persistence and OpenAI client stubs.',
+            'Generate smoke tests covering orchestrator happy-path execution.',
+        ]
+        commands = ['python -m pip install -r requirements.txt', 'pytest -q']
+        files = [
+            'pyproject.toml',
+            'requirements.txt',
+            'src/agent_system/cli.py',
+            'src/agent_system/config.py',
+            'src/agent_system/orchestrator.py',
+            'src/agent_system/agents/__init__.py',
+            'src/agent_system/agents/base.py',
+            'src/agent_system/agents/requirements.py',
+            'src/agent_system/agents/coding.py',
+            'src/agent_system/agents/testing.py',
+            'src/agent_system/agents/documentation.py',
+            'src/agent_system/persistence/__init__.py',
+            'src/agent_system/persistence/store.py',
+            'src/agent_system/sdk/__init__.py',
+            'src/agent_system/sdk/openai_client.py',
+            'tests/test_pipeline.py',
+            'README.md',
+        ]
+    else:
+        tasks = [
+            'Initialise repository structure and configuration.',
+            'Generate baseline code scaffolding aligning with requirements.',
+            'Create smoke tests to validate critical paths.',
+        ]
+        commands = ['git init' if project_type != 'generic-software-project' else 'mkdir -p src']
+        files = ['README.md', 'tests/'] if project_type != 'generic-software-project' else ['docs/notes.md']
+
     notes = plan_text
 
     if project_type == 'nextjs-dashboard':
@@ -219,6 +276,9 @@ def _real_scaffold_commands(project_type: str, policy) -> List[List[str]]:
         commands.append(['python', '-m', 'pip', 'install', '-r', 'requirements.txt'])
     elif project_type == 'sklearn-ml-experiment' and getattr(policy, 'allow_package_installs', False):
         commands.append(['python', '-m', 'pip', 'install', '-r', 'requirements.txt'])
+    elif project_type == 'multi-agent-coding-system' and getattr(policy, 'allow_package_installs', False):
+        commands.append(['python', '-m', 'pip', 'install', '-r', 'requirements.txt'])
+        commands.append(['pytest', '-q'])
     return commands
 
 
@@ -227,6 +287,8 @@ def _cli_health_checks(project_type: str) -> List[List[str]]:
         return [['npm', '--version']]
     if project_type == 'fastapi-crud-api':
         return [['python', '-m', 'pip', '--version']]
+    if project_type == 'multi-agent-coding-system':
+        return [['python', '-m', 'pip', '--version'], ['python', '-m', 'pytest', '--version']]
     return []
 
 
