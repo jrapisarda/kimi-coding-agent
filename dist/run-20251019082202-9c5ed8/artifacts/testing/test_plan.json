@@ -1,0 +1,10 @@
+{
+  "command": "npm run test -- --watch=false",
+  "smoke_tests": {
+    "tests": [
+      "renders dashboard page placeholder",
+      "README scaffold present"
+    ]
+  },
+  "status": "skipped"
+}

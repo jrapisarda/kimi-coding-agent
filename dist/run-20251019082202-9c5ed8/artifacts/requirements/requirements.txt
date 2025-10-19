@@ -1,0 +1,77 @@
+Summary of expectations
+- Deliver a Next.js 15 application written in TypeScript using the App Router that functions as an analytics dashboard.
+- Follow modern UI patterns (responsive layout, component-driven design, accessible controls).
+- Include multiple data views (Overview, Analytics, Users, Settings) with a responsive sidebar, top header (profile, notifications, search), and breadcrumbs.
+- Implement mock authentication with role-based access (Admin, User, Viewer), protected routes/route guards, and simulated session token refresh.
+- Provide interactive data visualization (line, bar, pie) using a charting library with simulated real‑time updates and date-range filters.
+- Implement data management features: sortable/filterable/paginated tables, bulk operations (select/delete/export), and inline editing for user records.
+- Export functionality for charts and tables (files) and simulated real-time updates for charts/tables.
+
+Acceptance criteria (testable, pass/fail)
+1. Project, build, and runtime
+   - The repository boots with npm/yarn/pnpm and builds successfully with Next.js 15 and TypeScript without type errors.
+   - App Router is used (app/ directory + server/client components as appropriate).
+
+2. Authentication & Authorization
+   - A login UI exists and accepts mock credentials; login yields a client-side session token.
+   - Role assignment is possible (Admin, User, Viewer); the UI shows/hides controls based on role.
+   - Protected routes cannot be accessed when logged out; attempting direct access redirects to login.
+   - Session token refresh is simulated (e.g., refresh call extends session) and this is observable (session expiry extended, UI not logged out prematurely).
+
+3. Routing & Guards
+   - Route guards prevent access to Admin-only pages for non-Admin roles.
+   - Breadcrumbs reflect navigation path on each dashboard view.
+
+4. Layout & Responsiveness
+   - Responsive sidebar with collapsible behavior on small screens.
+   - Top header contains profile avatar/menu, a notifications indicator, and a functional search control.
+   - Layout adapts across common viewport widths (mobile/tablet/desktop) without layout breaks.
+
+5. Dashboard views & navigation
+   - Four primary views are present: Overview, Analytics, Users, Settings.
+   - Navigation between views is functional and shows correct breadcrumbs and content.
+
+6. Data visualization
+   - At least three chart types (line, bar, pie) are implemented and rendered using a charting library.
+   - Charts support interactive features (hover tooltips, legend toggles, zoom or pan if applicable).
+   - Charts update in real time (simulated) at a configurable interval and a toggle exists to pause/resume updates.
+   - Charts can be filtered by date range and reflect selected range immediately.
+
+7. Export functionality
+   - Users can export chart visuals (e.g., PNG/SVG) and table data (CSV) from the UI.
+   - Exported files are downloadable and contain the expected content (chart image/table rows matching current filter).
+
+8. Tables & data management
+   - Data tables support sorting by column, filtering, and pagination.
+   - Bulk selection is possible (select all on page, multi-select), with at least Delete and Export bulk operations implemented.
+   - Inline editing for user records is available; edited fields persist in the mock dataset and the table updates to reflect changes.
+   - Delete operations prompt confirmation and remove items from the mock dataset.
+
+9. Real-time & simulated backend behavior
+   - Real-time updates are simulated (e.g., WebSocket mock, polling, or event emitter) and reflected in charts/tables.
+   - Simulated server responses include latency and token-refresh behavior for session simulation.
+
+10. Accessibility & UI quality
+    - Keyboard navigation works for primary controls (sidebar toggles, table row selection, modal dialogs).
+    - Basic ARIA attributes present for interactive elements (modals, alerts, menus).
+
+11. Code quality & testing
+    - TypeScript types are used for key data models (user, metrics, events).
+    - Critical components include unit or integration tests (example test suites or one end-to-end smoke test).
+    - Clear README with setup/run instructions and notes on mock data and simulated behaviors.
+
+Assumptions (clarifying choices or constraints)
+- Authentication is mock/client-side for this sprint: no real auth provider or secure backend is required. Token refresh is simulated and not cryptographically secure.
+- Backend is a mock/local data layer (in-memory, JSON files, or a small API route) that simulates latency and streaming; no production database integration is required.
+- Real-time updates are simulated (client-side interval/polling or a mock WebSocket server). No production push infrastructure required.
+- UI library/tooling: choose a modern combo (Tailwind CSS + shadcn/ui or Radix UI, or a component library like MUI) — exact choice is left to implementer.
+- Charting library: use a popular library with React support (e.g., Chart.js, Recharts, ApexCharts, or d3 wrappers). Choice is left to implementer but must support export and interactivity.
+- Export formats: CSV for table data and PNG (or SVG) for charts are acceptable unless a different format is requested.
+- Pagination and sorting can be client-side using the mock dataset; server-side pagination is optional if you simulate it via API routes.
+- Inline edits and bulk operations modify the mock dataset in memory or persisted to localStorage; no persistent backend required.
+- Role behavior: Admin has full access, User has limited actions (e.g., cannot access Settings), Viewer is read-only.
+- Security: Because auth is mocked, do not rely on this implementation for production security.
+- Browser support: modern evergreen browsers; Node 18+ for local dev environment.
+- Testing: minimal test coverage is acceptable for sprint testing; full e2e coverage is optional beyond a smoke test.
+
+If you want, I can convert these into a prioritized implementation checklist, create concrete UI/component contracts (props/types), or produce a sample project scaffold (file/folder layout + selected libraries). Which next step do you prefer?

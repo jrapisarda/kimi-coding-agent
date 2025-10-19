@@ -1,0 +1,1 @@
+Sprint 5 bundle containing manifest, agent artifacts, SBOM, dependency manifests, and execution logs.
