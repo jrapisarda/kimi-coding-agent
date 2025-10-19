@@ -39,10 +39,7 @@ class OpenAIClient:
         request_params = {
             "model": self.model,
             "input": prompt,
-            "temperature": self.temperature,
         }
-        if self.max_output_tokens is not None:
-            request_params["max_output_tokens"] = self.max_output_tokens
         try:
             LOGGER.debug("Invoking OpenAI Responses API with model %s", self.model)
             response = client.responses.create(**request_params)
