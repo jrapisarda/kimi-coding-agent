@@ -1,0 +1,79 @@
+Metadata-Version: 2.4
+Name: kimi-agent
+Version: 0.1.0
+Summary: Local-first multi-agent coding assistant CLI (Sprint 1 skeleton)
+Author: Kimi Agent Team
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.1.7
+Requires-Dist: openai>=1.50.2
+Dynamic: license-file
+
+﻿# Kimi Agent (Sprint 5)
+
+Sprint five adds CLI-aware scaffolding policies, resolved dependency manifests, npm-based smoke tests, and provenance-rich packaging on top of the earlier local-first pipeline.
+
+## Features
+
+- Sequential pipeline (`Requirements -> Coding -> Testing -> Documentation`) now executes real scaffolding logic for the four reference project types.
+- Coding agent generates deterministic file structures via the sandboxed `CommandRunner`, records dependencies, and persists scaffold manifests alongside optional CLI health checks (`--allow-cli-tools`).
+- Testing agent runs `python -m pytest -q` (or `npm run test -- --watch=false` for Next.js scaffolds), capturing logs, exit codes, skip reasons, and structured results in SQLite.
+- Documentation agent produces end-user `README.md`, `CHANGELOG.md`, and JSON summaries derived from requirements, coding plans, and test outcomes.
+- Packaging emits `dist/<run_id>.zip` bundling the manifest, agent artifacts, SBOM (built from scaffold dependencies), and command logs collected during execution.
+
+## Getting Started
+
+```bash
+python -m pip install -e .
+agent run ./projects/fastapi --prompt "Generate a FastAPI CRUD service" --input-docs docs/spec.md --allow-cli-tools --dry-run
+```
+
+- Set the `OPENAI_API_KEY` environment variable (and optionally `OPENAI_BASE_URL`) to enable live OpenAI Responses API calls for the Requirements, Coding, and Testing agents. If the key is missing the agents will gracefully fall back to stubbed outputs.
+- Remove `--dry-run` to scaffold into the target directory, execute smoke tests, and build `dist/<run_id>.zip`. Use `--allow-cli-tools` (and optionally `--allow-package-installs`) to exercise real Next.js/FastAPI CLIs when available.
+- Reference workspaces: `projects/nextjs`, `projects/fastapi`, `projects/etl`, `projects/ml`.
+- Sample specification for Requirements agent: `docs/spec.md`.
+
+## Testing
+
+```bash
+python -m pip install -r requirements-dev.txt
+pytest
+```
+
+## Architecture Overview
+
+- `src/kimi_agent/cli.py` wires Click CLI, logging, workspace manager, command runner, and orchestrator.
+- `src/kimi_agent/orchestrator.py` manages agent sequencing, run metadata, snapshots, command logs, and packaging hand-off.
+- `src/kimi_agent/agents/`:
+  - `requirements.py` → GPT-5-mini analysis of prompts/specifications.
+  - `coding.py` → scaffold generation + dependency recording.
+  - `testing.py` → automated pytest execution with structured artifacts.
+  - `documentation.py` → README/CHANGELOG generation.
+- `src/kimi_agent/scaffolding.py` contains deterministic project templates for Next.js, FastAPI-esque, ETL, and ML scenarios.
+- `src/kimi_agent/sandbox.py` provides the `CommandRunner` with dry-run logging and per-command log files.
+- `src/kimi_agent/workspace.py` captures snapshots/restores under `var/snapshots/` and `var/restores/`.
+- `src/kimi_agent/persistence/store.py` persists runs, steps, artifacts, and `run_events` timeline entries into SQLite (`var/runs.sqlite`).
+- `src/kimi_agent/packaging.py` assembles bundle contents (manifest, artifacts, SBOM, logs).
+
+## Observability & Artifacts
+
+- Database: `var/runs.sqlite` (tables: `runs`, `steps`, `artifacts`, `run_events`).
+- Run workspace: `var/runs/<run_id>/logs/*.log` records every executed command.
+- Snapshots/restores: `var/snapshots/<run_id>.zip` and `var/restores/<run_id>/` (non dry-run runs only).
+- Package bundle: `dist/<run_id>.zip` → `manifest.json`, `README.txt`, agent artifacts (including README/CHANGELOG), `sbom.json`, and command logs.
+
+## Next Steps
+
+1. Execute real Next.js/FastAPI scaffolding commands when tooling is available, using sandbox policies to gate installs.
+2. Capture dependency hashes and resolved versions via `pip freeze` / `npm ls` and merge them into SBOM + SQLite records.
+3. Extend provenance capture with model call identifiers and prompt excerpts across generated artifacts.
+
+## Documentation
+
+The consolidated sprint runbook (Sprints 1-4) lives in `docs/sprint-1-runbook.md`.
+
+
