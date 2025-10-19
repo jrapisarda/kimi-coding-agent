@@ -1,8 +1,0 @@
-{
-  "coverage": null,
-  "status": "skipped",
-  "return_code": null,
-  "log_path": "C:\\testprojects\\kimi-coding-agent\\var\\runs\\run-20251019082202-9c5ed8\\logs\\03-npm-run-test------watch=false.log",
-  "skip_reason": "missing-executable",
-  "analysis": "1. Verdict: Tests were skipped due to a missing executable, so no smoke tests ran and no coverage was reported.\n\n2. Critical observations:\n- The test command was not executed (Status: skipped, Return Code: not executed) with Skip Reason: missing-executable.\n- STDERR shows a Windows \"File not found\" error: \"[WinError 2] The system cannot find the file specified\" \u2014 likely indicating npm/node (or the test runner) is not available in PATH.\n- As a result, both smoke checks (\"renders dashboard page placeholder\" and \"README scaffold present\") were not validated and coverage is unavailable.\n\n3. Recommended next action: Ensure Node.js/npm are installed and on the system PATH (or that the test runner executable referenced by package.json exists), then reinstall dependencies (npm ci) and re-run the tests (npm run test -- --watch=false)."
-}
